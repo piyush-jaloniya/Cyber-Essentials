@@ -253,23 +253,35 @@ def os_support_status() -> dict:
     import datetime
     
     version = platform.version()
-    release = platform.release()
+    
+    # Get actual Windows version name (11 vs 10) using wmic
+    code, out, _ = run_cmd('wmic os get Caption /value')
+    os_name = "Windows 10"  # Default fallback
+    if code == 0 and "Caption=" in out:
+        for line in out.splitlines():
+            if line.startswith("Caption="):
+                caption = line.split("=", 1)[1].strip()
+                if "Windows 11" in caption:
+                    os_name = "Windows 11"
+                elif "Windows 10" in caption:
+                    os_name = "Windows 10"
+                break
     
     # Windows support lifecycle (simplified)
     eol_dates = {
-        "10": datetime.datetime(2025, 10, 14),  # Windows 10
-        "11": datetime.datetime(2031, 10, 10),  # Windows 11
+        "Windows 10": datetime.datetime(2025, 10, 14),
+        "Windows 11": datetime.datetime(2031, 10, 10),
     }
     
     supported = None
     eol_date = None
     
-    if release in eol_dates:
-        eol_date = eol_dates[release].strftime("%Y-%m-%d")
-        supported = datetime.datetime.now() < eol_dates[release]
+    if os_name in eol_dates:
+        eol_date = eol_dates[os_name].strftime("%Y-%m-%d")
+        supported = datetime.datetime.now() < eol_dates[os_name]
     
     return {
-        "os_version": f"Windows {release}",
+        "os_version": os_name,
         "supported": supported,
         "eol_date": eol_date,
         "build": version
