@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CyberEssentialsScannerReport",
+  "type": "object",
+  "required": [
+    "scanner_version",
+    "timestamp_utc",
+    "os",
+    "controls",
+    "overall"
+  ],
+  "properties": {
+    "scanner_version": {
+      "type": "string"
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "os": {
+      "type": "object",
+      "required": [
+        "platform",
+        "version"
+      ],
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "Windows",
+            "macOS",
+            "Linux"
+          ]
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "status",
+          "score",
+          "findings",
+          "recommendations",
+          "details"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "firewalls",
+              "secure_configuration",
+              "access_control",
+              "malware_protection",
+              "patch_management",
+              "remote_work_mdm"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "warn",
+              "fail",
+              "unknown"
+            ]
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "overall": {
+      "type": "object",
+      "required": [
+        "status",
+        "score"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "warn",
+            "fail",
+            "unknown"
+          ]
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}
