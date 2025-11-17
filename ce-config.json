@@ -1,0 +1,16 @@
+{
+    "compliance_mode": "standard",
+    "output": {
+        "path": "reports/report.json",
+        "format": "both"
+    },
+    "device_info": {
+        "organization": "My Organization",
+        "device_name": "",
+        "device_type": "laptop"
+    },
+    "logging": {
+        "level": "INFO"
+    },
+    "skip_admin_check": false
+}

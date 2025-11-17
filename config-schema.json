@@ -1,0 +1,84 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Cyber Essentials Scanner Configuration",
+    "description": "Configuration file for CE scanner settings and preferences",
+    "type": "object",
+    "properties": {
+        "compliance_mode": {
+            "type": "string",
+            "enum": [
+                "standard",
+                "strict"
+            ],
+            "default": "standard",
+            "description": "Standard (personal/BYOD) or Strict (corporate/managed) compliance mode"
+        },
+        "output": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "default": "reports/report.json",
+                    "description": "Default output path for scan reports"
+                },
+                "format": {
+                    "type": "string",
+                    "enum": [
+                        "json",
+                        "html",
+                        "both"
+                    ],
+                    "default": "json",
+                    "description": "Report output format"
+                }
+            }
+        },
+        "device_info": {
+            "type": "object",
+            "properties": {
+                "organization": {
+                    "type": "string",
+                    "description": "Organization name for reports"
+                },
+                "device_name": {
+                    "type": "string",
+                    "description": "Device identifier"
+                },
+                "device_type": {
+                    "type": "string",
+                    "enum": [
+                        "desktop",
+                        "laptop",
+                        "server"
+                    ],
+                    "description": "Type of device being scanned"
+                }
+            }
+        },
+        "logging": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "string",
+                    "enum": [
+                        "DEBUG",
+                        "INFO",
+                        "WARNING",
+                        "ERROR"
+                    ],
+                    "default": "INFO",
+                    "description": "Logging verbosity level"
+                },
+                "file": {
+                    "type": "string",
+                    "description": "Log file path (optional, logs to console if not specified)"
+                }
+            }
+        },
+        "skip_admin_check": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip administrator privilege check (not recommended)"
+        }
+    }
+}

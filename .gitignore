@@ -28,6 +28,12 @@ env/
 
 # IDE
 .vscode/
+
+# Generated files
+reports/*.html
+reports/*_comparison.json
+reports/*_fix.ps1
+*.log
 .idea/
 *.swp
 *.swo
