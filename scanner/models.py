@@ -27,14 +27,48 @@ class Report:
     overall: Dict[str, Any]
 
 def combine_statuses(statuses: List[Status]) -> Status:
-    # fail > warn > unknown > pass
-    if any(s == "fail" for s in statuses):
-        return "fail"
-    if any(s == "warn" for s in statuses):
-        return "warn"
-    if any(s == "unknown" for s in statuses):
+    """
+    Determine overall status using intelligent majority voting.
+    
+    Professional logic for CE compliance:
+    - ANY failure (fail) = overall FAIL (CE requirement not met)
+    - Multiple warnings or warning + unknown = WARN
+    - Mostly passes with 1 unknown = WARN (incomplete assessment)
+    - Majority passes (67%+) = PASS
+    - Mixed results = WARN (safe default)
+    """
+    if not statuses:
         return "unknown"
-    return "pass"
+    
+    # Count each status type
+    counts = {"fail": 0, "warn": 0, "pass": 0, "unknown": 0}
+    for s in statuses:
+        counts[s] += 1
+    
+    total = len(statuses)
+    
+    # CRITICAL: Any failure means CE compliance failure
+    if counts["fail"] > 0:
+        return "fail"
+    
+    # Multiple warnings or warning combined with unknown
+    if counts["warn"] >= 2 or (counts["warn"] >= 1 and counts["unknown"] >= 1):
+        return "warn"
+    
+    # Single unknown among mostly passes = warn (incomplete assessment)
+    if counts["unknown"] >= 1 and counts["pass"] >= total - 1:
+        return "warn"
+    
+    # Strong pass: majority of controls passed (67% threshold)
+    if counts["pass"] >= (total * 0.67):
+        return "pass"
+    
+    # All passed
+    if counts["pass"] == total:
+        return "pass"
+    
+    # Default to warn for mixed/unclear results
+    return "warn"
 
 def average_score(scores: List[float]) -> float:
     if not scores:
