@@ -2,7 +2,7 @@ from __future__ import annotations
 import platform
 from scanner.models import ControlResult
 
-def run(osw, mac, lin) -> ControlResult:
+def run(osw, mac, lin, strict_mode=False) -> ControlResult:
     system = platform.system()
     findings, recs, details = [], [], {}
     status = "unknown"; score = 0.7

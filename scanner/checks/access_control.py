@@ -2,7 +2,7 @@ from __future__ import annotations
 import platform
 from scanner.models import ControlResult
 
-def run(osw, mac, lin) -> ControlResult:
+def run(osw, mac, lin, strict_mode=False) -> ControlResult:
     system = platform.system()
     findings, recs, details = [], [], {}
     status = "unknown"; score = 0.7
@@ -20,6 +20,27 @@ def run(osw, mac, lin) -> ControlResult:
             findings.append("Password complexity disabled")
             recs.append("Enable password complexity policy")
             status, score = "fail", 0.0
+        
+        # Check password minimum length (MANDATORY for CE)
+        min_length = policy.get("min_length")
+        if min_length and min_length.isdigit():
+            min_len_int = int(min_length)
+            if min_len_int == 0:
+                findings.append("No password minimum length configured (CRITICAL SECURITY RISK)")
+                recs.append("Set minimum password length to at least 8 characters (MANDATORY for CE 2025)")
+                status, score = "fail", 0.0
+            elif min_len_int < 8:
+                findings.append(f"Weak password minimum length: {min_length} characters (should be at least 8)")
+                recs.append("Set minimum password length to at least 8 characters (CE 2025 requirement)")
+                status = "fail" if status == "unknown" else "fail"
+                score = min(score, 0.3)
+        
+        # Check password max age
+        max_age_str = policy.get("max_age", "")
+        if "Unlimited" in max_age_str or "Never" in max_age_str:
+            findings.append("Passwords never expire")
+            recs.append("Set maximum password age (e.g., 90 days) or use passwordless authentication")
+            status = "warn" if status == "unknown" else status
         
         # Check MFA/Windows Hello - CRITICAL for 2025 CE
         mfa = osw.mfa_status(); details["mfa"] = mfa
@@ -49,7 +70,7 @@ def run(osw, mac, lin) -> ControlResult:
         mfa = mac.mfa_biometric_status(); details["mfa"] = mfa
         if not mfa.get("touch_id_available"):
             findings.append("Touch ID/biometric authentication not available or configured")
-            recs.append("Enable Touch ID or configure MFA for all users (MANDATORY for CE 2025)")
+            recs.append("Enable Touch ID or configure MFA for all users (RECOMMENDED for CE 2025)")
             status = "warn"
         
         if not findings:

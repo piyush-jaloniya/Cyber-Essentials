@@ -12,16 +12,16 @@ def run_cmd(cmd: str, shell: bool = True, timeout: int = 15) -> Tuple[int, str, 
 def get_os_info():
     system = platform.system()
     if system == "Windows":
-           # Get actual Windows version name (Windows 10/11)
-           try:
-               code, out, _ = run_cmd('wmic os get Caption /value')
-               if code == 0 and "Caption=" in out:
-                   caption = out.split("Caption=")[1].strip().split('\n')[0].strip()
-                   version = platform.version()
-                   return caption, version
-           except Exception:
-               pass
-           return "Windows", platform.version()
+        # Get actual Windows version name (Windows 10/11)
+        try:
+            code, out, _ = run_cmd('wmic os get Caption /value')
+            if code == 0 and "Caption=" in out:
+                caption = out.split("Caption=")[1].strip().split('\n')[0].strip()
+                version = platform.version()
+                return caption, version
+        except Exception:
+            pass
+        return "Windows", platform.version()
     elif system == "Darwin":
         return "macOS", platform.mac_ver()[0]
     else:

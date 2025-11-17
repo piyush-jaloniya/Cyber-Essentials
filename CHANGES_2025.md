@@ -238,7 +238,7 @@ Updated the Cyber Essentials System Scanner to comply with **Cyber Essentials v3
 - `scanner/checks/remote_work_mdm.py` - NEW module for 2025
 
 ### Schema & Documentation
-- `report/schema.json` - Added remote_work_mdm to control enum
+- `report_schema/schema.json` - Added remote_work_mdm to control enum
 - `README.md` - Updated with 2025 features
 
 ---
@@ -293,3 +293,31 @@ Updated the Cyber Essentials System Scanner to comply with **Cyber Essentials v3
 **Date:** November 14, 2025
 **Author:** GitHub Copilot
 **Compliance Standard:** UK Cyber Essentials v3.2 (2025)
+
+## Structural Changes
+
+### New Control Module: Remote Work & MDM
+
+**Why a 6th module?**
+
+Traditional Cyber Essentials has **5 core control areas**. However, the 2025 guidance introduced several new requirements that don't naturally fit into these categories:
+
+- ✅ **Device Encryption** → Added to `malware_protection` (fits well)
+- ✅ **MFA/2FA** → Added to `access_control` (fits well)
+- ❓ **MDM Enrollment** → Doesn't fit access control (not authentication)
+- ❓ **VPN for Remote Work** → Doesn't fit secure configuration (infrastructure, not hardening)
+- ❓ **Remote Wipe Capability** → Doesn't fit any traditional control
+
+**Solution:** Created a dedicated `remote_work_mdm` module for:
+- VPN configuration detection
+- MDM enrollment verification
+- Remote wipe capability checks
+- Azure AD/workplace join status
+
+**Benefits:**
+1. **Cleaner code** - Each module has a single responsibility
+2. **Better reporting** - Users see exactly what's being checked
+3. **Conditional enforcement** - Only strict mode checks these (corporate devices)
+4. **Future-proof** - Easy to add more remote work checks as guidance evolves
+
+**Compliance Note:** The scanner remains **fully compliant** with CE 2025. The 6 modules map to the 5 traditional controls + conditional 2025 remote working requirements.

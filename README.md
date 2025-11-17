@@ -45,6 +45,12 @@ This scanner now includes **all critical Cyber Essentials 2025 requirements**:
 - Application whitelisting (AppLocker, WDAC, Gatekeeper)
 - OS support lifecycle verification
 
+### 🎯 Compliance Modes (NEW)
+- **Standard Mode:** For personal devices and BYOD (conditional checks as warnings)
+- **Strict Mode (`--strict-mode`):** For corporate/managed devices (all checks mandatory)
+- Automatic UAC elevation on Windows (no manual admin required)
+- `--no-admin` flag for testing without privilege elevation
+
 ## Highlights
 - Cross-platform (Windows, macOS, Linux)
 - Modular checks with OS adapters
@@ -56,7 +62,8 @@ This scanner now includes **all critical Cyber Essentials 2025 requirements**:
 
 ### Prerequisites
 - Python 3.10+
-- Some checks require elevated privileges (Administrator on Windows, sudo on Linux/macOS) for higher fidelity results.
+- Some checks require elevated privileges (Administrator on Windows, sudo on Linux/macOS) for higher fidelity results
+- The scanner will automatically prompt for admin elevation on Windows when needed
 
 ### Install
 ```bash
@@ -66,11 +73,30 @@ pip install --upgrade pip
 ```
 
 ### Run
+
+**Standard Mode (Personal/BYOD devices):**
 ```bash
-python -m scanner.main --output report.json
+python -m scanner.main
+# Output: reports/report.json
 ```
 
-Optional elevated permission:
+**Strict Mode (Corporate/Managed devices):**
+```bash
+python -m scanner.main --strict-mode
+# Output: reports/report.json
+```
+
+**Custom output location:**
+```bash
+python -m scanner.main --output reports/my_scan.json
+```
+
+**Skip Admin Prompt (for testing):**
+```bash
+python -m scanner.main --no-admin
+```
+
+**On Linux/macOS with elevated privileges:**
 ```bash
 sudo python -m scanner.main --output report.json
 ```
@@ -78,11 +104,12 @@ sudo python -m scanner.main --output report.json
 ### Example output
 ```json
 {
-  "scanner_version": "0.1.0",
-  "timestamp_utc": "2025-11-10T16:29:34Z",
+  "scanner_version": "0.2.0",
+  "timestamp_utc": "2025-11-14T10:30:00Z",
+  "compliance_mode": "standard",
   "os": {
     "platform": "Windows",
-    "version": "10.0.19045"
+    "version": "11 Home Single Language"
   },
   "controls": [
     {
@@ -113,39 +140,116 @@ sudo python -m scanner.main --output report.json
 }
 ```
 
-## What’s Checked (initial coverage)
+## Compliance Modes
 
-- Firewalls
-  - Windows: Defender Firewall profiles enabled
-  - macOS: Application Firewall status (socketfilterfw)
-  - Linux: ufw/firewalld/nftables basic checks
+The scanner supports two compliance modes to accommodate different device types:
 
-- Secure Configuration
-  - Windows: Guest account status, RDP, SMBv1
-  - macOS: Guest login, Remote Login (SSH)
-  - Linux: SSH config basics, password policy markers (login.defs/PAM presence)
+### Standard Mode (Default)
+**For:** Personal devices, BYOD (Bring Your Own Device), home users
 
-- Access Control
-  - Windows: Size of local Administrators group, password policy summary
-  - macOS: Admin group members
-  - Linux: sudo/wheel members
+**Checks enforced:**
+- ✅ Firewall enabled
+- ✅ Antivirus/malware protection
+- ✅ Patch management (14-day rule)
+- ✅ Secure configuration (screen lock, default accounts)
+- ✅ Access control (password policy, MFA recommended)
 
-- Malware Protection
-  - Windows: Registered AV via SecurityCenter2 (name and basic state if accessible)
-  - macOS: Gatekeeper status, known AV presence (best-effort)
-  - Linux: ClamAV presence and service state (if installed)
+**Conditional checks (warnings only):**
+- ⚠️ BitLocker/FileVault (recommended but not required)
+- ⚠️ VPN configuration (if remote work applicable)
+- ⚠️ MDM enrollment (if corporate device)
+- ⚠️ Azure AD/cloud join (if managed device)
 
-- Patch Management
-  - Windows: Latest hotfix date (Get-HotFix) heuristic
-  - macOS: softwareupdate history and pending update check
-  - Linux: Pending updates via package manager discovery (apt/dnf/yum/zypper) heuristics
+### Strict Mode (`--strict-mode`)
+**For:** Corporate devices, managed workstations, compliance-critical environments
 
-Notes:
-- These are pragmatic, minimally invasive checks for a first pass. Production deployments often integrate with:
-  - Enterprise AV/EDR APIs (Defender for Endpoint, CrowdStrike, etc.)
-  - MDM/endpoint management APIs
-  - Windows Update APIs, macOS MDM profiles, Linux patch management tooling
-- Where data is unavailable, status may be `unknown` with actionable recommendations to re-run with elevated privileges.
+**All checks enforced:**
+- ✅ Everything from Standard Mode
+- ✅ **BitLocker/FileVault mandatory** (FAIL if not enabled)
+- ✅ **VPN configuration required** (FAIL if missing)
+- ✅ **MDM enrollment required** (FAIL if not enrolled)
+- ✅ **Azure AD/cloud join required** (FAIL if not joined)
+
+### When to Use Each Mode
+
+| Device Type | Mode | Rationale |
+|-------------|------|-----------|
+| Personal laptop/desktop | Standard | BitLocker optional, no VPN/MDM expected |
+| BYOD (Bring Your Own Device) | Standard | Employee-owned, limited corporate control |
+| Corporate workstation | Strict | Full compliance required |
+| Managed laptop | Strict | MDM, encryption, VPN mandatory |
+| Development machine | Standard | Unless corporate policy requires strict |
+| Production server | Strict | Maximum security posture required |
+
+## What's Checked
+
+### Firewalls ✅
+- Windows: Defender Firewall (all profiles)
+- macOS: Application Firewall status
+- Linux: ufw/firewalld/nftables
+
+### Secure Configuration ✅
+- Windows: Guest/default accounts, RDP, SMBv1, screen lock timeout
+- macOS: Guest login, Remote Login, screen saver
+- Linux: SSH config, password policy, screen lock
+
+### Access Control ✅
+- Password policy (min length ≥8, complexity)
+- MFA/Windows Hello/PIN (mandatory in CE 2025)
+- Admin user count (≤3 recommended)
+- Cloud MFA (Azure AD, Microsoft 365)
+
+### Malware Protection ✅
+- Antivirus status and real-time protection
+- Device encryption (BitLocker/FileVault/LUKS)
+  - Standard mode: Warning if disabled
+  - Strict mode: Failure if disabled
+- Application control (AppLocker/Gatekeeper/AppArmor)
+
+### Patch Management ✅
+- OS support status (no EOL systems allowed)
+- Latest hotfix within 14 days (CE 2025 requirement)
+- Pending updates detection
+- Auto-update configuration
+
+### Remote Work & MDM ✅ (NEW in CE 2025)
+- MDM enrollment (Intune, Jamf, etc.)
+- VPN configuration for remote access
+- Azure AD/cloud join status
+- Remote wipe capability
+  - Standard mode: Warning if missing
+  - Strict mode: Failure if missing
+
+**Notes:**
+- Elevated privileges required for full detection (BitLocker, hotfix history, etc.)
+- Windows scanner automatically prompts for UAC elevation when needed
+- `unknown` status indicates insufficient permissions or detection failure
+- Use `--no-admin` flag to skip admin prompt for testing
+
+## Admin Privilege Handling
+
+### Automatic UAC Elevation (Windows)
+The scanner automatically detects when it needs administrator privileges and prompts for UAC elevation:
+
+```powershell
+# Scanner detects it needs admin privileges
+python -m scanner.main --output report.json
+
+# Windows UAC prompt appears automatically
+# User clicks "Yes" to allow elevation
+# Scanner restarts with admin privileges
+# Full scan runs with complete detection
+```
+
+### Flags
+- **Default behavior:** Prompts for admin when needed
+- **`--no-admin`:** Skips privilege check and UAC prompt (for testing)
+- **`--strict-mode`:** Enables corporate compliance mode (still prompts for admin)
+
+### Linux/macOS
+```bash
+sudo python -m scanner.main --output report.json
+```
 
 ## Web Integration Pattern
 
@@ -157,7 +261,7 @@ Notes:
    - Validate schema, store, and optionally run AI summary for non-technical users.
 
 Minimal API contract:
-- Request body must conform to `report/schema.json`
+- Request body must conform to `report_schema/schema.json`
 - Response:
   ```json
   { "ok": true, "reportId": "..." }

@@ -3,6 +3,9 @@ import argparse
 import json
 import datetime
 import platform
+import sys
+import os
+import ctypes
 
 from scanner.models import Report, OSInfo, combine_statuses, average_score
 from scanner.utils import get_os_info
@@ -17,10 +20,76 @@ from scanner.checks import firewall, secure_configuration, access_control, malwa
 
 SCANNER_VERSION = "0.2.0"  # Updated for Cyber Essentials 2025 compliance
 
+def is_admin():
+    """Check if running with administrator privileges"""
+    try:
+        if platform.system() == "Windows":
+            return ctypes.windll.shell32.IsUserAnAdmin() != 0
+        else:
+            return os.geteuid() == 0
+    except Exception:
+        return False
+
+def request_admin_elevation():
+    """Request administrator privileges on Windows"""
+    if platform.system() == "Windows":
+        try:
+            # Get the current working directory
+            cwd = os.getcwd()
+            
+            # Add --no-admin to prevent infinite loop
+            params = ' '.join([f'"{arg}"' if ' ' in arg else arg for arg in sys.argv[1:]])
+            params += ' --no-admin'
+            
+            # Create a wrapper command that keeps window open
+            # Use -m scanner.main to run as module with correct path
+            cmd = f'cd /d "{cwd}" & "{sys.executable}" -m scanner.main {params} & echo. & echo Scan complete! Press any key to close... & pause > nul'
+            
+            # Use ShellExecute to run as admin
+            ctypes.windll.shell32.ShellExecuteW(
+                None, 
+                "runas", 
+                "cmd.exe",
+                f'/k "{cmd}"',
+                None, 
+                1
+            )
+            sys.exit(0)
+        except Exception as e:
+            print(f"Failed to elevate privileges: {e}", file=sys.stderr)
+            return False
+    return False
+
 def main():
     parser = argparse.ArgumentParser(description="Cyber Essentials System Scanner")
-    parser.add_argument("--output", "-o", type=str, default="-", help="Output file path or - for stdout")
+    parser.add_argument("--output", "-o", type=str, default="reports/report.json", help="Output file path or - for stdout (default: reports/report.json)")
+    parser.add_argument("--no-admin", action="store_true", help="Skip admin privilege check")
+    parser.add_argument("--strict-mode", action="store_true", help="Enable strict mode (corporate/managed device compliance - checks all conditional requirements)")
     args = parser.parse_args()
+    
+    # Ensure reports directory exists
+    if args.output != "-" and args.output != "":
+        output_dir = os.path.dirname(args.output)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+
+    # Check for admin privileges
+    if not args.no_admin and not is_admin():
+        print("⚠️  WARNING: Not running as Administrator")
+        print("Some checks require elevated privileges for complete results:")
+        print("  • BitLocker encryption status")
+        print("  • Windows Update hotfix history")
+        print("  • Full NGC/Windows Hello configuration")
+        print()
+        
+        response = input("Run as Administrator now? [Y/n]: ").strip().lower()
+        if response in ['', 'y', 'yes']:
+            print("Requesting administrator privileges...")
+            request_admin_elevation()
+            return
+        else:
+            print("Continuing without administrator privileges (results may be incomplete)...")
+            print()
 
     system, version = get_os_info()
     os_info = OSInfo(platform=system, version=version)
@@ -29,9 +98,10 @@ def main():
     w, m, l = osw, osm, osl
 
     results = []
+    strict_mode = args.strict_mode
     for check in [firewall, secure_configuration, access_control, malware_protection, patch_management, remote_work_mdm]:
         try:
-            res = check.run(w, m, l)
+            res = check.run(w, m, l, strict_mode=strict_mode)
         except Exception as e:
             # Defensive: no single check should crash the run
             res = check.__name__, {
@@ -58,6 +128,7 @@ def main():
     doc = {
         "scanner_version": report.scanner_version,
         "timestamp_utc": report.timestamp_utc,
+        "compliance_mode": "strict" if strict_mode else "standard",
         "os": {"platform": report.os.platform, "version": report.os.version},
         "controls": [r.__dict__ for r in report.controls],
         "overall": report.overall

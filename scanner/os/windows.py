@@ -38,21 +38,44 @@ def rdp_enabled() -> dict:
     return {"enabled": None}
 
 def smb1_enabled() -> dict:
+    # Try PowerShell method first (more reliable with admin)
+    ps = 'powershell -NoProfile -Command "try { (Get-SmbServerConfiguration -ErrorAction Stop).EnableSMB1Protocol } catch { \'NOTFOUND\' }"'
+    code, out, _ = run_cmd(ps)
+    if code == 0 and out.strip():
+        out_lower = out.strip().lower()
+        if "true" in out_lower:
+            return {"enabled": True, "method": "powershell"}
+        elif "false" in out_lower:
+            return {"enabled": False, "method": "powershell"}
+    
+    # Try Windows Feature check (alternative method)
+    ps2 = 'powershell -NoProfile -Command "(Get-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -ErrorAction SilentlyContinue).State"'
+    code2, out2, _ = run_cmd(ps2)
+    if code2 == 0 and out2.strip():
+        out2_lower = out2.strip().lower()
+        if "enabled" in out2_lower:
+            return {"enabled": True, "method": "windows_feature"}
+        elif "disabled" in out2_lower:
+            return {"enabled": False, "method": "windows_feature"}
+    
+    # Fallback to registry check
     # SMBv1 client setting
     cmd = r'reg query "HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" /v SMB1'
     code, out, _ = run_cmd(cmd)
     if code == 0 and "0x0" in out:
-        return {"enabled": False}
+        return {"enabled": False, "method": "registry"}
     if code == 0 and "0x1" in out:
-        return {"enabled": True}
+        return {"enabled": True, "method": "registry"}
     # Server side
     cmd2 = r'reg query "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v SMB1'
     code2, out2, _ = run_cmd(cmd2)
     if code2 == 0 and "0x0" in out2:
-        return {"enabled": False}
+        return {"enabled": False, "method": "registry"}
     if code2 == 0 and "0x1" in out2:
-        return {"enabled": True}
-    return {"enabled": None}
+        return {"enabled": True, "method": "registry"}
+    
+    # If all methods fail, SMB1 is likely not configured (good thing)
+    return {"enabled": None, "note": "SMB1 registry keys not found - likely disabled or not configured"}
 
 def local_admins() -> dict:
     code, out, _ = run_cmd('net localgroup administrators')
@@ -107,25 +130,67 @@ def av_status() -> dict:
     return {"products": [], "note": "Unable to query SecurityCenter2"}
 
 def latest_hotfix_days() -> dict:
-    # Heuristic: Get-HotFix newest InstalledOn date
-    ps = 'powershell -NoProfile -Command "(Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1 | Select-Object InstalledOn) | ConvertTo-Json"'
+    # Try multiple methods to get hotfix information
+    # Method 1: Get-HotFix with better date handling and error capture
+    ps = 'powershell -NoProfile -Command "try { $hotfix = Get-HotFix | Where-Object {$_.InstalledOn} | Sort-Object InstalledOn -Descending | Select-Object -First 1; if ($hotfix) { $hotfix.InstalledOn.ToString(\'yyyy-MM-dd\') } else { \'NONE\' } } catch { \'ERROR\' }"'
     code, out, _ = run_cmd(ps)
-    if code == 0 and out:
+    if code == 0 and out and out.strip() and out.strip() not in ['NONE', 'ERROR', '']:
+        try:
+            import datetime
+            date_str = out.strip()
+            installed = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            days = (datetime.datetime.now() - installed).days
+            return {"latest_hotfix_days": days, "latest_installed_on": date_str}
+        except Exception as e:
+            pass
+    
+    # Method 2: Try Get-HotFix with JSON output
+    ps2 = 'powershell -NoProfile -Command "Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 1 InstalledOn, HotFixID | ConvertTo-Json"'
+    code2, out2, _ = run_cmd(ps2)
+    if code2 == 0 and out2:
         try:
             import json, datetime
-            data = json.loads(out)
-            date_str = data.get("InstalledOn")
-            if date_str:
-                try:
-                    installed = datetime.datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                except Exception:
-                    installed = None
-                if installed:
-                    days = (datetime.datetime.utcnow().replace(tzinfo=installed.tzinfo) - installed).days
-                    return {"latest_hotfix_days": days, "latest_installed_on": date_str}
+            data = json.loads(out2)
+            if isinstance(data, dict) and data.get('InstalledOn'):
+                date_str = data['InstalledOn']
+                # Try parsing ISO format
+                for sep in ['T', ' ']:
+                    if sep in date_str:
+                        date_str = date_str.split(sep)[0]
+                        break
+                installed = datetime.datetime.strptime(date_str.split('T')[0], "%Y-%m-%d")
+                days = (datetime.datetime.now() - installed).days
+                return {"latest_hotfix_days": days, "latest_installed_on": date_str, "hotfix_id": data.get('HotFixID')}
         except Exception:
             pass
-    return {"latest_hotfix_days": None}
+    
+    # Method 3: Try WMIC QFE query with better parsing
+    code3, out3, _ = run_cmd('wmic qfe get InstalledOn,HotFixID /format:csv')
+    if code3 == 0 and out3:
+        try:
+            import datetime
+            lines = [l.strip() for l in out3.splitlines() if l.strip() and ',' in l]
+            dates = []
+            for line in lines[1:]:  # Skip header
+                parts = line.split(',')
+                if len(parts) >= 2:
+                    date_part = parts[1].strip()
+                    if date_part and date_part != 'InstalledOn':
+                        # Try multiple date formats
+                        for fmt in ["%m/%d/%Y", "%Y%m%d", "%Y-%m-%d", "%d/%m/%Y"]:
+                            try:
+                                dates.append((datetime.datetime.strptime(date_part, fmt), parts[2] if len(parts) > 2 else None))
+                                break
+                            except:
+                                continue
+            if dates:
+                latest_date, hotfix_id = max(dates, key=lambda x: x[0])
+                days = (datetime.datetime.now() - latest_date).days
+                return {"latest_hotfix_days": days, "latest_installed_on": latest_date.strftime("%Y-%m-%d"), "hotfix_id": hotfix_id}
+        except Exception:
+            pass
+    
+    return {"latest_hotfix_days": None, "error": "Unable to query Windows Update history - may need admin privileges"}
 
 def mfa_status() -> dict:
     """Check MFA/Windows Hello status"""
@@ -218,7 +283,7 @@ def screen_lock_policy() -> dict:
     if code2 == 0 and "ScreenSaverIsSecure" in out2:
         results["screensaver_password"] = "0x1" in out2
     
-    # Check power settings for screen timeout
+    # Check power settings for screen timeout (AC power)
     ps = 'powershell -NoProfile -Command "powercfg /query SCHEME_CURRENT SUB_VIDEO VIDEOIDLE | Select-String \'Current AC Power Setting Index:\'"'
     code3, out3, _ = run_cmd(ps)
     if code3 == 0 and out3:
@@ -228,23 +293,86 @@ def screen_lock_policy() -> dict:
             timeout_sec = int(match.group(1), 16)
             results["screen_timeout_minutes"] = timeout_sec / 60
     
+    # If no timeout found, check battery power settings as fallback
+    if "screen_timeout_minutes" not in results:
+        ps_battery = 'powershell -NoProfile -Command "powercfg /query SCHEME_CURRENT SUB_VIDEO VIDEOIDLE | Select-String \'Current DC Power Setting Index:\'"'
+        code4, out4, _ = run_cmd(ps_battery)
+        if code4 == 0 and out4:
+            import re
+            match = re.search(r"0x([0-9a-fA-F]+)", out4)
+            if match:
+                timeout_sec = int(match.group(1), 16)
+                results["screen_timeout_minutes"] = timeout_sec / 60
+    
+    # Mark as unknown if no detection method worked
+    if "screen_timeout_minutes" not in results and "screensaver_timeout_minutes" not in results:
+        results["detection_failed"] = True
+    
     return results
 
 def mdm_enrollment() -> dict:
     """Check MDM enrollment status"""
-    # Check Intune/MDM enrollment
-    code, out, _ = run_cmd(r'reg query "HKLM\SOFTWARE\Microsoft\Enrollments" /s')
-    enrolled = "Enrollments" in out and "UPN" in out
+    enrolled = False
+    enrollment_details = []
+    enrollment_type = None
+    
+    # Check Intune/MDM enrollment with better detection
+    ps_mdm = 'powershell -NoProfile -Command "Get-ChildItem -Path \'HKLM:\\SOFTWARE\\Microsoft\\Enrollments\' -Recurse -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object {$_.UPN -or $_.ProviderID -or $_.EnrollmentState} | Select-Object PSPath, UPN, ProviderID, EnrollmentState, EnrollmentType | ConvertTo-Json"'
+    code, out, _ = run_cmd(ps_mdm)
+    if code == 0 and out:
+        try:
+            import json
+            data = json.loads(out)
+            if isinstance(data, dict):
+                data = [data]
+            for item in data:
+                if item.get('EnrollmentState') or item.get('UPN') or item.get('ProviderID'):
+                    enrolled = True
+                    enrollment_details.append({
+                        "upn": item.get('UPN'),
+                        "provider": item.get('ProviderID'),
+                        "state": item.get('EnrollmentState'),
+                        "type": item.get('EnrollmentType')
+                    })
+                    if item.get('ProviderID'):
+                        enrollment_type = "MDM"
+        except:
+            # Fallback to text parsing
+            if "UPN" in out or "ProviderID" in out or "EnrollmentState" in out:
+                enrolled = True
+                enrollment_type = "MDM"
+    
+    # Fallback to basic registry query with better parsing
+    if not enrolled:
+        code2, out2, _ = run_cmd(r'reg query "HKLM\SOFTWARE\Microsoft\Enrollments" /s')
+        if code2 == 0 and out2:
+            # Look for any enrollment indicators
+            if any(key in out2 for key in ["UPN", "ProviderID", "EnrollmentState", "EnrollmentType"]):
+                enrolled = True
+                enrollment_type = "Registry"
+            # Count enrollment GUIDs
+            import re
+            guids = re.findall(r'Enrollments\\([A-F0-9-]{36})', out2)
+            if guids:
+                enrollment_details.append({"enrollment_guids": len(guids), "note": "Found enrollment keys but limited details without admin"})
     
     # Check Azure AD join status
-    ps = 'powershell -NoProfile -Command "dsregcmd /status | Select-String \'AzureAdJoined\'"'
-    code2, out2, _ = run_cmd(ps)
-    azure_joined = "YES" in out2.upper() if code2 == 0 else False
+    ps_azure = 'powershell -NoProfile -Command "dsregcmd /status | Select-String \'AzureAdJoined\'"'
+    code3, out3, _ = run_cmd(ps_azure)
+    azure_joined = "YES" in out3.upper() if code3 == 0 else False
+    
+    # Check Workplace Join
+    ps_wj = 'powershell -NoProfile -Command "dsregcmd /status | Select-String \'WorkplaceJoined\'"'
+    code4, out4, _ = run_cmd(ps_wj)
+    workplace_joined = "YES" in out4.upper() if code4 == 0 else False
     
     return {
         "mdm_enrolled": enrolled,
         "azure_ad_joined": azure_joined,
-        "raw": out[:500] if out else ""
+        "workplace_joined": workplace_joined,
+        "enrollment_type": enrollment_type,
+        "enrollment_details": enrollment_details if enrollment_details else None,
+        "diagnostic": "Run as admin for complete MDM enrollment details" if not enrollment_details else None
     }
 
 def os_support_status() -> dict:

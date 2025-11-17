@@ -2,6 +2,26 @@
 
 ## Understanding Your Scan Results
 
+### Compliance Modes
+
+The scanner operates in two modes to handle different device scenarios:
+
+**Standard Mode (Default):**
+- For personal devices, BYOD, home users
+- Mandatory checks: Firewall, AV, patches, passwords, MFA
+- Conditional checks (warnings): BitLocker, VPN, MDM, Azure AD
+- More lenient for devices without corporate management
+
+**Strict Mode (`--strict-mode`):**
+- For corporate devices, managed workstations
+- All checks are mandatory (no conditional warnings)
+- BitLocker/encryption REQUIRED
+- VPN configuration REQUIRED
+- MDM enrollment REQUIRED
+- Azure AD join REQUIRED
+
+**Check your report's `compliance_mode` field to see which mode was used.**
+
 ### Overall Status Meanings
 
 | Status | Meaning | Action Required |
@@ -149,10 +169,13 @@
 **Notes:**
 - ⚠️ Cannot verify BitLocker status (needs admin)
 - ⚠️ No application whitelisting (AppLocker/WDAC)
+- In **Standard Mode**: BitLocker warning (not a failure)
+- In **Strict Mode**: BitLocker required (FAIL if disabled)
 
 **Recommendations:**
 1. Run as Administrator to check BitLocker
-2. Consider enabling AppLocker for additional security
+2. For corporate devices: Use `--strict-mode` flag
+3. Consider enabling AppLocker for additional security
 
 ---
 
@@ -203,15 +226,26 @@
 **For most accurate results, run as Administrator:**
 
 ```powershell
-# PowerShell as Administrator
+# PowerShell (scanner will auto-prompt for elevation)
 cd "C:\Users\HP\Downloads\ce"
-python -m scanner.main --output report_admin.json
+
+# Personal/BYOD device (Standard Mode) - default output
+python -m scanner.main
+# Output: reports/report.json
+
+# Corporate/managed device (Strict Mode)
+python -m scanner.main --strict-mode --output reports/corporate_scan.json
+
+# Skip admin prompt (for testing)
+python -m scanner.main --no-admin --output reports/test_scan.json
 ```
 
-This will provide:
+Admin privileges provide:
 - ✅ BitLocker encryption status
 - ✅ Hotfix/patch history (14-day check)
 - ✅ Complete system configuration
+- ✅ Windows Hello/PIN detection
+- ✅ MDM enrollment details
 
 ---
 
@@ -290,6 +324,38 @@ dsregcmd /status
 ```powershell
 Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 5
 ```
+
+---
+
+## 📋 Report Structure
+
+Your JSON report contains:
+
+```json
+{
+  "scanner_version": "0.2.0",
+  "timestamp_utc": "2025-11-14T10:00:26Z",
+  "compliance_mode": "strict",
+  "os": { ... },
+  "controls": [ ... ],  // 6 control areas
+  "overall": { ... }
+}
+```
+
+### Control Areas (6 modules):
+
+The scanner checks **6 control areas** based on Cyber Essentials 2025:
+
+| # | Control Area | CE Traditional | Mandatory? |
+|---|--------------|----------------|------------|
+| 1 | Firewalls | ✅ Core Control #1 | Always |
+| 2 | Secure Configuration | ✅ Core Control #2 | Always |
+| 3 | Access Control | ✅ Core Control #3 | Always |
+| 4 | Malware Protection | ✅ Core Control #4 | Always |
+| 5 | Patch Management | ✅ Core Control #5 | Always |
+| 6 | Remote Work & MDM | ⚠️ CE 2025 Addition | Strict mode only |
+
+> **About the 6th module:** Traditional Cyber Essentials has 5 core controls. The 2025 guidance added new requirements for remote working (VPN, MDM enrollment, remote wipe capability) that are conditional based on device type. We organized these into a dedicated module for cleaner code structure and reporting. In **standard mode** (personal devices), this module is not enforced. In **strict mode** (corporate devices), it's fully checked.
 
 ---
 

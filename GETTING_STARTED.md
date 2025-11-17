@@ -28,35 +28,38 @@ Your Cyber Essentials System Scanner has been **fully upgraded to v0.2.0** with 
 - ✅ `README.md` - Updated with 2025 features
 - ✅ `CHANGES_2025.md` - Detailed change log
 - ✅ `REPORT_GUIDE.md` - How to interpret your results
-- ✅ `report/schema.json` - Updated JSON schema
+- ✅ `report_schema/schema.json` - Updated JSON schema
 
 ### Tools & Reports
-- ✅ `quick_fix.ps1` - Automated remediation script
 - ✅ `test_report.json` - Your current scan results
 
 ---
 
 ## 🚀 Quick Start Guide
 
-### 1. Run Basic Scan
+### 1. Run Basic Scan (Personal Device)
 ```powershell
-python -m scanner.main --output report.json
+# Standard mode - for personal/BYOD devices
+python -m scanner.main
+# Output: reports/report.json
 ```
 
-### 2. Run Complete Scan (Administrator)
+### 2. Run Corporate Scan (Managed Device)
 ```powershell
-# Right-click PowerShell → Run as Administrator
-python -m scanner.main --output report_admin.json
+# Strict mode - for corporate/managed devices
+python -m scanner.main --strict-mode --output reports/corporate_scan.json
 ```
 
-### 3. Apply Quick Fixes
+### 3. Run Without Admin Prompt (Testing)
 ```powershell
-# As Administrator
-.\quick_fix.ps1
+# Skip UAC elevation prompt
+python -m scanner.main --no-admin --output reports/test_scan.json
 ```
 
 ### 4. Review Results
 Open `REPORT_GUIDE.md` to understand your results and required actions.
+
+**Note:** The scanner will automatically prompt for Administrator privileges on Windows when needed for full detection capabilities (BitLocker, hotfix history, etc.).
 
 ---
 
@@ -108,26 +111,40 @@ Open `REPORT_GUIDE.md` to understand your results and required actions.
 
 ---
 
-## 🎯 Your Current Status
+## 🎯 Example Scan Results
 
-Based on `test_report.json`:
+### Standard Mode (Personal Device)
+Typical results for a well-maintained personal device:
 
-| Control Area | Status | Score | Priority |
-|--------------|--------|-------|----------|
-| Firewalls | ✅ PASS | 1.0 | None |
-| Secure Configuration | ⚠️ WARN | 0.6 | Medium |
-| Access Control | ❌ FAIL | 0.3 | **CRITICAL** |
-| Malware Protection | ✅ PASS | 1.0 | Low |
-| Patch Management | ❌ FAIL | 0.0 | **CRITICAL** |
-| Remote Work & MDM | ⚠️ WARN | 0.7 | Medium |
+| Control Area | Status | Score | Notes |
+|--------------|--------|-------|-------|
+| Firewalls | ✅ PASS | 1.0 | All profiles enabled |
+| Secure Configuration | ✅ PASS | 1.0 | Screen lock configured |
+| Access Control | ✅ PASS | 1.0 | PIN/Windows Hello enabled |
+| Malware Protection | ⚠️ WARN | 0.8 | AV active, BitLocker warning |
+| Patch Management | ✅ PASS | 1.0 | Up to date |
+| Remote Work & MDM | ⚠️ WARN | 0.8 | VPN/MDM warnings (OK) |
 
-**Overall: FAIL (0.6/1.0)**
+**Overall: WARN (0.88/1.0)** - Good for personal device!
 
-### Critical Issues to Fix:
-1. ❌ **Enable MFA/Windows Hello** (Access Control)
-2. ❌ **Upgrade from Windows 10 to 11** (Patch Management)
-3. ⚠️ **Reduce screen lock timeout to 15 min** (Secure Configuration)
-4. ⚠️ **Enroll in MDM** (Remote Work & MDM)
+### Strict Mode (Corporate Device)
+Same device scanned with `--strict-mode`:
+
+| Control Area | Status | Score | Notes |
+|--------------|--------|-------|-------|
+| Firewalls | ✅ PASS | 1.0 | All profiles enabled |
+| Secure Configuration | ✅ PASS | 1.0 | Screen lock configured |
+| Access Control | ✅ PASS | 1.0 | PIN/Windows Hello enabled |
+| Malware Protection | ❌ FAIL | 0.6 | **BitLocker required** |
+| Patch Management | ✅ PASS | 1.0 | Up to date |
+| Remote Work & MDM | ❌ FAIL | 0.4 | **VPN/MDM required** |
+
+**Overall: FAIL (0.72/1.0)** - Needs corporate compliance fixes
+
+### Key Differences
+- **Standard Mode:** BitLocker/VPN/MDM are warnings (not failures)
+- **Strict Mode:** BitLocker/VPN/MDM failures block certification
+- Use Standard Mode unless you're certifying a corporate/managed device
 
 ---
 
@@ -136,7 +153,7 @@ Based on `test_report.json`:
 ### This Week (CRITICAL)
 - [ ] Enable Windows Hello PIN on all devices
 - [ ] Plan Windows 11 upgrade (Win 10 is EOL)
-- [ ] Run `quick_fix.ps1` to apply automated fixes
+- [ ] Apply security fixes based on scan results
 - [ ] Re-run scanner as Administrator
 
 ### This Month (HIGH PRIORITY)
@@ -153,39 +170,70 @@ Based on `test_report.json`:
 
 ---
 
-## 🔧 How to Use the Tools
+## 📖 Understanding Compliance Modes
 
-### Scanner Commands
+### Standard Mode (Default)
+**Use for:** Personal devices, BYOD, home users
+
 ```powershell
-# Basic scan (current user)
 python -m scanner.main --output report.json
-
-# Full scan (Administrator)
-python -m scanner.main --output report_admin.json
-
-# Output to console
-python -m scanner.main --output -
 ```
 
-### Quick Fix Script
-```powershell
-# Run as Administrator
-.\quick_fix.ps1
+**What's checked:**
+- ✅ Firewall, AV, patches (mandatory)
+- ✅ Password policy, MFA (mandatory)
+- ⚠️ BitLocker (warning if disabled)
+- ⚠️ VPN, MDM (warning if missing)
 
-# This will:
-# - Set screen lock timeout to 15 minutes
-# - Enable screen saver password
-# - Check BitLocker status
-# - Check Windows Hello configuration
-# - Verify Windows version support
-# - Check update status
-# - Validate Azure AD join
-# - Check default accounts
-# - Verify VPN configuration
+**Result:** More lenient scoring for personal devices
+
+### Strict Mode (`--strict-mode`)
+**Use for:** Corporate devices, managed workstations, compliance-critical
+
+```powershell
+python -m scanner.main --strict-mode --output report_corporate.json
+```
+
+**What's checked:**
+- ✅ Everything from Standard Mode
+- ❌ BitLocker REQUIRED (fail if disabled)
+- ❌ VPN REQUIRED (fail if missing)
+- ❌ MDM REQUIRED (fail if not enrolled)
+
+**Result:** Stricter scoring for corporate compliance
+
+### When to Use Each Mode
+
+| Your Device | Use Mode | Why |
+|-------------|----------|-----|
+| Personal laptop at home | Standard | BitLocker/VPN not expected |
+| Work-from-home BYOD | Standard | Employee-owned device |
+| Company-issued laptop | Strict | Corporate security required |
+| Office workstation | Strict | Full management expected |
+| Developer machine | Standard | Unless policy requires strict |
+
+### 🔧 Scanner Commands
+
+```powershell
+# Personal device scan (default output: reports/report.json)
+python -m scanner.main
+
+# Corporate device scan with custom name
+python -m scanner.main --strict-mode --output reports/corporate_scan.json
+
+# Skip admin prompt (testing)
+python -m scanner.main --no-admin --output reports/test_scan.json
+
+# Output to console (no file)
+python -m scanner.main --output -
+
+# Custom location outside reports folder
+python -m scanner.main --output my_custom_report.json
 ```
 
 ### Understanding Reports
 See `REPORT_GUIDE.md` for:
+- Compliance mode differences (Standard vs Strict)
 - Status meanings (PASS/WARN/FAIL/UNKNOWN)
 - How to interpret findings
 - Specific remediation steps
@@ -221,19 +269,43 @@ To achieve Cyber Essentials 2025 certification:
 ## 🆘 Troubleshooting
 
 ### "Cannot determine BitLocker status"
-**Solution:** Run PowerShell as Administrator
+**Solution:** 
+- Windows will prompt for Administrator privileges automatically
+- Or run: `python -m scanner.main` (allow UAC prompt)
+- Manual: Right-click PowerShell → Run as Administrator
 
 ### "MFA not detected" but I have PIN set up
 **Solution:** 
 1. Verify in Settings → Accounts → Sign-in options
-2. Run scanner as Administrator
-3. Check if Windows Hello is properly configured
+2. Allow admin elevation when scanner prompts
+3. Check Windows Hello is configured (not just PIN option shown)
+4. Re-run scanner: `python -m scanner.main`
 
 ### "Unsupported OS" for Windows 10
-**Solution:** Windows 10 EOL was October 14, 2025. Upgrade to Windows 11 is MANDATORY.
+**Solution:** 
+- Windows 10 EOL was October 14, 2025
+- Upgrade to Windows 11 is **MANDATORY** for CE 2025
+- Check hardware compatibility first
 
 ### Scanner runs but shows all "unknown" status
-**Solution:** Run with Administrator privileges for full system access
+**Solution:** 
+- Allow UAC elevation prompt when it appears
+- Or use: `python -m scanner.main` (don't use --no-admin flag)
+- Ensure you're running from correct directory
+
+### "Device not enrolled in MDM" - Should I worry?
+**Solution:**
+- **Standard Mode:** This is just a warning, not a failure
+- **Strict Mode:** This is mandatory for corporate devices
+- Personal devices: MDM enrollment is optional
+- Corporate devices: Contact IT for Intune/MDM enrollment
+
+### "BitLocker not enabled" - Different results by mode
+**Explanation:**
+- **Standard Mode:** Shows as WARNING (recommended but not required)
+- **Strict Mode:** Shows as FAILURE (mandatory for corporate)
+- This is expected behavior, not a bug
+- Use the appropriate mode for your device type
 
 ---
 
@@ -259,19 +331,31 @@ To achieve Cyber Essentials 2025 certification:
 
 ## ✅ Verification Checklist
 
-After making changes, verify compliance:
-
-- [ ] Run scanner as Administrator
+### For Standard Mode (Personal/BYOD)
+- [ ] Run: `python -m scanner.main --output report.json`
 - [ ] Overall status is PASS or WARN (no FAIL)
-- [ ] MFA enabled on all user accounts
-- [ ] BitLocker enabled on all drives
-- [ ] Windows 11 installed (or latest supported OS)
+- [ ] Firewall enabled on all profiles
+- [ ] Antivirus active and updated
+- [ ] MFA/Windows Hello/PIN enabled
+- [ ] Supported OS (Windows 11, macOS 13+, etc.)
 - [ ] Patches applied within last 14 days
 - [ ] Screen lock timeout ≤ 15 minutes
-- [ ] MDM enrolled (if mobile/remote device)
-- [ ] VPN configured (if remote worker)
-- [ ] Default accounts disabled
-- [ ] Antivirus active and updated
+- [ ] Default/guest accounts disabled
+- [ ] Password policy (min length ≥8)
+
+**Optional but recommended:**
+- [ ] BitLocker/FileVault enabled
+- [ ] VPN configured (if working remotely)
+
+### For Strict Mode (Corporate/Managed)
+- [ ] Run: `python -m scanner.main --strict-mode --output report.json`
+- [ ] All Standard Mode items above
+- [ ] **BitLocker/FileVault REQUIRED** (mandatory)
+- [ ] **MDM enrollment REQUIRED** (Intune/Jamf)
+- [ ] **VPN configuration REQUIRED**
+- [ ] **Azure AD join REQUIRED** (managed devices)
+- [ ] Application control enabled (AppLocker/Gatekeeper)
+- [ ] Overall status is PASS (no FAIL or WARN)
 
 ---
 
@@ -282,10 +366,9 @@ You now have a **complete Cyber Essentials 2025 compliance toolkit**:
 ✅ Automated scanning for all CE 2025 requirements  
 ✅ Detailed reports with specific findings  
 ✅ Actionable recommendations  
-✅ Quick fix automation  
 ✅ Comprehensive documentation  
 
-**Next Step:** Run `quick_fix.ps1` as Administrator to start fixing issues!
+**Next Step:** Run the scanner and follow the recommendations to fix issues!
 
 ---
 

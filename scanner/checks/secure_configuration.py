@@ -2,7 +2,7 @@ from __future__ import annotations
 import platform
 from scanner.models import ControlResult
 
-def run(osw, mac, lin) -> ControlResult:
+def run(osw, mac, lin, strict_mode=False) -> ControlResult:
     system = platform.system()
     findings, recs, details = [], [], {}
     status = "unknown"
@@ -36,11 +36,21 @@ def run(osw, mac, lin) -> ControlResult:
         
         # Check screen lock
         screen_lock = osw.screen_lock_policy(); details["screen_lock"] = screen_lock
-        timeout = screen_lock.get("screensaver_timeout_minutes", 999)
-        if timeout > 15:
-            findings.append(f"Screen lock timeout too long ({timeout} minutes)")
-            recs.append("Set screen lock timeout to 15 minutes or less")
+        if screen_lock.get("detection_failed"):
+            findings.append("Unable to determine screen lock timeout - verify manually")
+            recs.append("Check screen lock settings in Settings > Personalization > Lock Screen")
             status = "warn" if status != "fail" else "fail"
+        else:
+            # Check screensaver timeout first, then power timeout
+            timeout = screen_lock.get("screensaver_timeout_minutes") or screen_lock.get("screen_timeout_minutes")
+            if timeout and timeout > 15:
+                findings.append(f"Screen lock timeout too long ({int(timeout)} minutes)")
+                recs.append("Set screen lock timeout to 15 minutes or less")
+                status = "warn" if status != "fail" else "fail"
+            elif timeout is None:
+                findings.append("Screen lock timeout not configured or not detected")
+                recs.append("Configure automatic screen lock timeout (15 minutes max)")
+                status = "warn" if status != "fail" else "fail"
         
         if not findings:
             status, score = "pass", 1.0

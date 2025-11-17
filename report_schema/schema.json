@@ -5,6 +5,7 @@
   "required": [
     "scanner_version",
     "timestamp_utc",
+    "compliance_mode",
     "os",
     "controls",
     "overall"
@@ -16,6 +17,13 @@
     "timestamp_utc": {
       "type": "string",
       "format": "date-time"
+    },
+    "compliance_mode": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "strict"
+      ]
     },
     "os": {
       "type": "object",
