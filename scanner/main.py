@@ -223,8 +223,18 @@ def main():
         print(payload)
     else:
         # File output: support JSON, HTML, or both
-        json_path = output_path
-        html_path = output_path.replace('.json', '.html')
+        # Organize reports into separate folders
+        base_name = os.path.basename(output_path)
+        
+        # JSON path: reports/json/filename.json
+        json_dir = os.path.join(os.path.dirname(output_path), "json")
+        os.makedirs(json_dir, exist_ok=True)
+        json_path = os.path.join(json_dir, base_name)
+        
+        # HTML path: reports/html/filename.html
+        html_dir = os.path.join(os.path.dirname(output_path), "html")
+        os.makedirs(html_dir, exist_ok=True)
+        html_path = os.path.join(html_dir, base_name.replace('.json', '.html'))
         
         if output_format in ["json", "both"]:
             payload = json.dumps(doc, indent=2)
@@ -252,9 +262,12 @@ def main():
         comparison = compare_reports(doc, previous_report)
         print_comparison(comparison)
         
-        # Optionally save comparison data
+        # Optionally save comparison data in json subfolder
         if comparison.get("has_previous"):
-            comparison_path = output_path.replace('.json', '_comparison.json')
+            # Save comparison in json folder
+            base_name = os.path.basename(output_path).replace('.json', '_comparison.json')
+            json_dir = os.path.join(os.path.dirname(output_path), "json")
+            comparison_path = os.path.join(json_dir, base_name)
             save_comparison_report(comparison, comparison_path)
             logger.info(f"Comparison report saved to {comparison_path}")
     

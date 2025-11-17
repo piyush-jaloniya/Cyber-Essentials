@@ -10,6 +10,13 @@ from datetime import datetime
 
 def load_previous_scan(report_path: str) -> Dict[str, Any]:
     """Load the most recent scan report"""
+    # Check if report_path includes json subfolder
+    if os.path.basename(os.path.dirname(report_path)) != "json":
+        # Adjust path to look in json subfolder
+        dir_path = os.path.dirname(report_path)
+        base_name = os.path.basename(report_path)
+        report_path = os.path.join(dir_path, "json", base_name)
+    
     if not os.path.exists(report_path):
         return {}
     

@@ -47,9 +47,11 @@ test_*.json
 report.json
 report_*.json
 
-# Generated reports (new location)
-reports/*.json
-!reports/.gitkeep
+# Generated reports - organized by type
+reports/json/*.json
+!reports/json/.gitkeep
+reports/html/*.html
+!reports/html/.gitkeep
 
 # Temporary/Debug files
 fix_indent.py
