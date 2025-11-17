@@ -32,8 +32,11 @@ env/
 # Generated files
 reports/*.html
 reports/*_comparison.json
-reports/*_fix.ps1
 *.log
+
+# Auto-fix scripts
+Auto_Fix_Scripts/*.ps1
+!Auto_Fix_Scripts/.gitkeep
 .idea/
 *.swp
 *.swo

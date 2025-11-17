@@ -262,7 +262,19 @@ def main():
     if args.generate_fix:
         if platform.system() == "Windows":
             try:
-                remediation_script = output_path.replace('.json', '_fix.ps1') if output_path != "-" else "remediation.ps1"
+                # Create Auto_Fix_Scripts folder if it doesn't exist
+                fix_scripts_dir = "Auto_Fix_Scripts"
+                if not os.path.exists(fix_scripts_dir):
+                    os.makedirs(fix_scripts_dir, exist_ok=True)
+                
+                # Generate script name based on report name
+                if output_path != "-" and output_path != "":
+                    # Extract base filename without path and extension
+                    base_name = os.path.basename(output_path).replace('.json', '')
+                    remediation_script = os.path.join(fix_scripts_dir, f"{base_name}_fix.ps1")
+                else:
+                    remediation_script = os.path.join(fix_scripts_dir, "report_fix.ps1")
+                
                 script_path = generate_remediation_script(doc, remediation_script)
                 print(f"\n🔧 Remediation script generated: {script_path}")
                 print(f"   Run as Administrator to apply automated fixes:")
