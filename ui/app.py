@@ -184,9 +184,23 @@ class MainWindow(QMainWindow):
                 percent = int(int(idx) / int(total) * 100)
                 self.progress.setValue(percent)
                 self.status_label.setText(f"{ctrl}: {status}")
+            else:
+                # Support split messages where status appears on a separate line
+                m2 = re.search(r"\[(\d+)/(\d+)\] Checking (.+?)\.\.\.", text)
+                if m2:
+                    idx, total, ctrl = m2.groups()
+                    percent = int(int(idx) / int(total) * 100)
+                    self.progress.setValue(percent)
+                    self.status_label.setText(f"{ctrl}: running...")
         if "Overall Status:" in text:
             self.progress.setValue(100)
             self.status_label.setText(text.strip())
+        # Support 'Name => status' lines from programmatic runner
+        import re
+        m3 = re.search(r"(.+?)\s*=>\s*(pass|warn|fail|unknown)", text, flags=re.IGNORECASE)
+        if m3:
+            ctrl, st = m3.groups()
+            self.status_label.setText(f"{ctrl}: {st.upper()}")
         if "HTML report saved to:" in text or "HTML saved to:" in text:
             self.btn_open_report.setEnabled(True)
             self.last_html_path = text.strip().split(":", 1)[-1].strip()
