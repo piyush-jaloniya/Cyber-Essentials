@@ -107,8 +107,10 @@ def run_scan(
         "overall": report.overall,
     }
 
-    # Save JSON
-    root_reports = os.path.join(os.path.dirname(os.path.dirname(__file__)), "reports")
+    # Save JSON - use absolute path from project root
+    # __file__ is scanner/runner.py, so go up 2 levels to get project root
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    root_reports = os.path.join(project_root, "reports")
     json_dir = os.path.join(root_reports, "json")
     html_dir = os.path.join(root_reports, "html")
     os.makedirs(json_dir, exist_ok=True)
@@ -138,7 +140,7 @@ def run_scan(
             _log(f"Comparison saved to: {comparison_path}")
 
     if generate_fix and os.name == 'nt':
-        fix_scripts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Auto_Fix_Scripts")
+        fix_scripts_dir = os.path.join(project_root, "Auto_Fix_Scripts")
         os.makedirs(fix_scripts_dir, exist_ok=True)
         remediation_script = os.path.join(fix_scripts_dir, f"{os.path.splitext(base_name)[0]}_fix.ps1")
         script_path = generate_remediation_script(doc, remediation_script)

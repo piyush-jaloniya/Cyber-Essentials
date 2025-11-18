@@ -15,7 +15,8 @@ def run_cmd(cmd: str, shell: bool = True, timeout: int = 15) -> Tuple[int, str, 
         logger.debug(f"Executing command: {cmd}")
         proc = subprocess.run(cmd, shell=shell, capture_output=True, timeout=timeout, text=True)
         if proc.returncode != 0:
-            logger.warning(f"Command returned non-zero exit code {proc.returncode}: {cmd}")
+            # Only log at DEBUG level (not WARNING) to avoid cluttering console when checks probe for optional features
+            logger.debug(f"Command returned non-zero exit code {proc.returncode}: {cmd}")
             if proc.stderr:
                 logger.debug(f"stderr: {proc.stderr.strip()}")
         return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
