@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
     QHeaderView, QStatusBar
 )
 from PySide6.QtCore import Qt, Signal, QObject, QThread
-from PySide6.QtGui import QFont, QColor, QTextCursor
+from PySide6.QtGui import QFont, QColor, QTextCursor, QIcon, QPixmap
 
 from scanner.runner import run_scan
 
@@ -73,19 +73,42 @@ class CyberEssentialsGUI(QMainWindow):
         self.setWindowTitle("Cyber Essentials Scanner v0.2.0")
         self.setMinimumSize(1000, 700)
         
+        # Set window icon
+        icon_path = "assets/CE_Icon.ico"
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+        
         # Create central widget and main layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
         
-        # Title
-        title_label = QLabel("🛡️ Cyber Essentials System Scanner")
+        # Title with icon
+        title_layout = QHBoxLayout()
+        title_layout.addStretch()
+        
+        # Add icon to title with glow effect
+        icon_label = QLabel()
+        shield_path = "assets/CE_Shield_Outline.png"
+        if os.path.exists(shield_path):
+            pixmap = QPixmap(shield_path)
+            scaled_pixmap = pixmap.scaled(48, 48, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            icon_label.setPixmap(scaled_pixmap)
+        icon_label.setAlignment(Qt.AlignVCenter)
+        icon_label.setStyleSheet("background: transparent;")
+        icon_label.setContentsMargins(0, 0, 0, 0)
+        title_layout.addWidget(icon_label, 0, Qt.AlignVCenter)
+        title_layout.setSpacing(5)
+        
+        title_label = QLabel("Cyber Essentials System Scanner")
         title_font = QFont()
         title_font.setPointSize(18)
         title_font.setBold(True)
         title_label.setFont(title_font)
-        title_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title_label)
+        title_label.setAlignment(Qt.AlignVCenter)
+        title_layout.addWidget(title_label, 0, Qt.AlignVCenter)
+        title_layout.addStretch()
+        main_layout.addLayout(title_layout)
         
         # Subtitle
         subtitle_label = QLabel("UK Cyber Essentials v3.2 (2025) - Compliance Verification Tool")
@@ -223,158 +246,191 @@ class CyberEssentialsGUI(QMainWindow):
             "Run with administrator/sudo for full detection."
         )
         info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #88b3d9; padding: 5px; background-color: #002649; border-radius: 3px;")
+        info_label.setStyleSheet("color: #aaccff; padding: 5px; font-style: italic;")
         main_layout.addWidget(info_label)
     
     def apply_styles(self):
-        """Apply modern styling to the application"""
+        """Apply modern styling to the application - CE Icon color scheme"""
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #001b37;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #001230, stop:1 #000919);
             }
             QWidget {
-                background-color: #001b37;
                 color: #ffffff;
             }
             QGroupBox {
                 font-weight: bold;
-                border: 2px solid #0a3d62;
-                border-radius: 5px;
+                border: 2px solid #00132a;
+                border-radius: 8px;
                 margin-top: 10px;
-                padding-top: 10px;
-                background-color: #002649;
+                padding-top: 15px;
+                background-color: rgba(0, 18, 42, 0.6);
                 color: #ffffff;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 5px 0 5px;
-                color: #4a9eff;
-            }
-            QPushButton {
-                background-color: #0a3d62;
                 color: #ffffff;
-                border: 1px solid #4a9eff;
-                border-radius: 3px;
-                padding: 8px 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #0d4d7d;
-                border: 1px solid #6bb3ff;
-            }
-            QPushButton:pressed {
-                background-color: #053154;
-            }
-            QPushButton:disabled {
-                background-color: #003050;
-                color: #666666;
-                border: 1px solid #004060;
-            }
-            QProgressBar {
-                border: 2px solid #0a3d62;
-                border-radius: 5px;
-                text-align: center;
-                height: 25px;
-                background-color: #002649;
-                color: #ffffff;
-            }
-            QProgressBar::chunk {
-                background-color: #4a9eff;
-                border-radius: 3px;
-            }
-            QTableWidget {
-                gridline-color: #0a3d62;
-                background-color: #002649;
-                color: #ffffff;
-                border: 1px solid #0a3d62;
-            }
-            QTableWidget::item {
-                padding: 5px;
-                background-color: #002649;
-                color: #ffffff;
-            }
-            QTableWidget::item:selected {
-                background-color: #0a3d62;
-            }
-            QHeaderView::section {
-                background-color: #0a3d62;
-                color: #ffffff;
-                padding: 5px;
-                border: 1px solid #001b37;
-                font-weight: bold;
-            }
-            QTextEdit {
-                background-color: #002649;
-                border: 1px solid #0a3d62;
-                border-radius: 3px;
-                color: #ffffff;
-            }
-            QLineEdit, QComboBox {
-                padding: 5px;
-                border: 1px solid #0a3d62;
-                border-radius: 3px;
-                background-color: #002649;
-                color: #ffffff;
-            }
-            QComboBox::drop-down {
-                border: none;
-                background-color: #0a3d62;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 6px solid #ffffff;
-                width: 0;
-                height: 0;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #002649;
-                color: #ffffff;
-                selection-background-color: #0a3d62;
-                border: 1px solid #0a3d62;
-            }
-            QCheckBox {
-                color: #ffffff;
-                spacing: 5px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-                border: 1px solid #0a3d62;
-                border-radius: 3px;
-                background-color: #002649;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #4a9eff;
-                border: 1px solid #4a9eff;
             }
             QLabel {
                 color: #ffffff;
             }
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #00132a, stop:1 #000919);
+                color: #ffffff;
+                border: 2px solid #001f4d;
+                border-radius: 5px;
+                padding: 8px 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #001f4d, stop:1 #00132a);
+                border: 2px solid #003d7a;
+            }
+            QPushButton:pressed {
+                background-color: #000a1a;
+                border: 2px solid #00132a;
+            }
+            QPushButton:disabled {
+                background-color: #001020;
+                color: #666666;
+                border: 2px solid #000a1a;
+            }
+            QProgressBar {
+                border: 2px solid #00132a;
+                border-radius: 5px;
+                text-align: center;
+                height: 25px;
+                background-color: #000a1a;
+                color: #ffffff;
+            }
+            QProgressBar::chunk {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #001f4d, stop:1 #0066cc);
+                border-radius: 3px;
+            }
+            QTableWidget {
+                gridline-color: #00132a;
+                background-color: #000a1a;
+                color: #ffffff;
+                border: 1px solid #00132a;
+                border-radius: 5px;
+            }
+            QTableWidget::item {
+                padding: 5px;
+                color: #ffffff;
+            }
+            QHeaderView::section {
+                background-color: #001230;
+                color: #ffffff;
+                padding: 5px;
+                border: 1px solid #00132a;
+                font-weight: bold;
+            }
+            QTextEdit {
+                background-color: #000a1a;
+                color: #ffffff;
+                border: 1px solid #00132a;
+                border-radius: 5px;
+                selection-background-color: #001f4d;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #00132a;
+                border-radius: 5px;
+                background-color: #000a1a;
+                color: #ffffff;
+            }
+            QComboBox {
+                padding: 5px 25px 5px 10px;
+                border: 1px solid #00132a;
+                border-radius: 5px;
+                background-color: #000a1a;
+                color: #ffffff;
+                min-height: 25px;
+            }
+            QComboBox::drop-down {
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 25px;
+                border-left: 1px solid #00132a;
+                border-top-right-radius: 5px;
+                border-bottom-right-radius: 5px;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #001f4d, stop:1 #001230);
+            }
+            QComboBox::drop-down:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #003d7a, stop:1 #001f4d);
+            }
+            QComboBox::down-arrow {
+                image: url(assets/dropdown_arrow.png);
+                width: 16px;
+                height: 16px;
+            }
+            QComboBox::down-arrow:hover {
+                image: url(assets/dropdown_arrow_hover.png);
+            }
+            QComboBox QAbstractItemView {
+                background-color: #001230;
+                color: #ffffff;
+                selection-background-color: #001f4d;
+                border: 1px solid #00132a;
+                outline: none;
+            }
+            QCheckBox {
+                color: #ffffff;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border: 2px solid #003d7a;
+                border-radius: 4px;
+                background-color: #000a1a;
+            }
+            QCheckBox::indicator:hover {
+                border: 2px solid #0066cc;
+                background-color: #001230;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #0066cc;
+                border: 2px solid #0066cc;
+                image: url(assets/checkbox_check.png);
+            }
+            QCheckBox::indicator:checked:hover {
+                background-color: #0080ff;
+                border: 2px solid #0080ff;
+            }
             QTabWidget::pane {
-                border: 1px solid #0a3d62;
-                background-color: #001b37;
+                border: 1px solid #00132a;
+                background-color: #000a1a;
+                border-radius: 5px;
             }
             QTabBar::tab {
-                background-color: #002649;
+                background-color: #001230;
                 color: #ffffff;
-                border: 1px solid #0a3d62;
                 padding: 8px 16px;
-                margin-right: 2px;
+                border: 1px solid #00132a;
+                border-bottom: none;
+                border-top-left-radius: 5px;
+                border-top-right-radius: 5px;
             }
             QTabBar::tab:selected {
-                background-color: #0a3d62;
-                border-bottom: 2px solid #4a9eff;
+                background-color: #000a1a;
+                border-bottom: 2px solid #0066cc;
             }
             QTabBar::tab:hover {
-                background-color: #0d4d7d;
+                background-color: #001f4d;
             }
             QStatusBar {
-                background-color: #002649;
+                background-color: #000919;
                 color: #ffffff;
-                border-top: 1px solid #0a3d62;
+                border-top: 1px solid #00132a;
             }
         """)
     
@@ -544,13 +600,17 @@ class CyberEssentialsGUI(QMainWindow):
             
             # Name
             name_item = QTableWidgetItem(name)
-            name_item.setFont(QFont("", weight=QFont.Bold))
+            name_font = QFont()
+            name_font.setBold(True)
+            name_item.setFont(name_font)
             self.results_table.setItem(i, 0, name_item)
             
             # Status
             status_item = QTableWidgetItem(status)
             status_item.setForeground(QColor(status_colors.get(status, "#6c757d")))
-            status_item.setFont(QFont("", weight=QFont.Bold))
+            status_font = QFont()
+            status_font.setBold(True)
+            status_item.setFont(status_font)
             self.results_table.setItem(i, 1, status_item)
             
             # Score
@@ -632,8 +692,10 @@ def main():
     """Main entry point for the GUI application"""
     app = QApplication(sys.argv)
     
-    # Set application-wide font
-    font = QFont("Segoe UI", 10)
+    # Set application-wide font with fallbacks to avoid font warnings
+    font = QFont()
+    font.setFamilies(["Segoe UI", "Arial", "Helvetica", "sans-serif"])
+    font.setPointSize(10)
     app.setFont(font)
     
     # Create and show main window
