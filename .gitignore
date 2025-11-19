@@ -62,3 +62,10 @@ mfa_status_fixed.txt
 # OS
 .DS_Store
 Thumbs.db
+
+# Test/demo files
+gui_screenshot.png
+gui_results_screenshot.png
+take_screenshot.py
+take_results_screenshot.py
+test_gui.py
