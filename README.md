@@ -52,6 +52,7 @@ This scanner now includes **all critical Cyber Essentials 2025 requirements**:
 - `--no-admin` flag for testing without privilege elevation
 
 ## Highlights
+- **🖥️ Graphical User Interface (GUI)** - Modern PySide6-based interface for easy scanning
 - Cross-platform (Windows, macOS, Linux)
 - Modular checks with OS adapters
 - Safe-by-default: returns `unknown` when OS information is unavailable or permissions are insufficient
@@ -62,6 +63,7 @@ This scanner now includes **all critical Cyber Essentials 2025 requirements**:
 
 ### Prerequisites
 - Python 3.10+
+- PySide6 (for GUI) - Optional, CLI works without it
 - Some checks require elevated privileges (Administrator on Windows, sudo on Linux/macOS) for higher fidelity results
 - The scanner will automatically prompt for admin elevation on Windows when needed
 
@@ -70,9 +72,28 @@ This scanner now includes **all critical Cyber Essentials 2025 requirements**:
 python -m venv .venv
 . .venv/bin/activate  # Windows: .\.venv\Scripts\activate
 pip install --upgrade pip
+pip install PySide6  # For GUI support
 ```
 
 ### Run
+
+#### Using the GUI (Recommended for Interactive Use)
+
+**Launch the graphical interface:**
+```bash
+python run_gui.py
+```
+
+**Features:**
+- Point-and-click configuration
+- Real-time progress display
+- Visual results with color-coded status
+- Integrated report viewer
+- Automatic report generation
+
+See [GUI_GUIDE.md](GUI_GUIDE.md) for complete GUI documentation.
+
+#### Using the Command Line
 
 **Standard Mode (Personal/BYOD devices):**
 ```bash

@@ -17,3 +17,4 @@ classifiers = [
 
 [project.scripts]
 ce-scan = "scanner.main:main"
+ce-scan-gui = "scanner.gui:main"
