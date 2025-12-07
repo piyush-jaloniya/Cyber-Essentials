@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ce-postgres
+    environment:
+      POSTGRES_DB: ce_controller
+      POSTGRES_USER: ce_user
+      POSTGRES_PASSWORD: ce_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ce_user -d ce_controller"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  controller:
+    build: .
+    container_name: ce-controller
+    environment:
+      DATABASE_URL: postgresql://ce_user:ce_password@postgres:5432/ce_controller
+      SECRET_KEY: ${SECRET_KEY:-change_me_in_production}
+      DEBUG: ${DEBUG:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -69,3 +69,35 @@ gui_results_screenshot.png
 take_screenshot.py
 take_results_screenshot.py
 test_gui.py
+
+# Fleet Management
+# Controller
+controller/.env
+controller/ce_controller.db
+controller/ce_controller.db-*
+controller/*.log
+
+# Agent
+agent/.env
+agent/*.log
+agent/.agent_token
+.agent_token
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Docker
+docker-compose.override.yml
+
+# Deployment
+*.intunewin
+deployment/temp/

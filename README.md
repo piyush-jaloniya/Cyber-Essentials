@@ -12,6 +12,20 @@ This tool scans a workstation for the Cyber Essentials control areas and produce
 
 It provides a machine-readable compliance status with recommendations and can be integrated into a website for end users to run locally and upload results.
 
+## 🚀 NEW: Fleet Management
+
+**Scale from single-system scanning to enterprise fleet management!**
+
+The scanner now includes a complete **Controller-Agent architecture** for managing compliance across multiple endpoints:
+
+- **Controller Server:** FastAPI backend with PostgreSQL database
+- **Web Dashboard:** React-based admin interface
+- **Fleet Agent:** Lightweight daemon for remote scanning
+- **Deployment Tools:** GPO, Intune, systemd, and LaunchDaemon scripts
+
+👉 **See [FLEET_README.md](FLEET_README.md) for fleet management setup**
+👉 **See [FLEET_ARCHITECTURE.md](FLEET_ARCHITECTURE.md) for architecture details**
+
 ## 🆕 What's New in 2025 (v0.2.0)
 
 This scanner now includes **all critical Cyber Essentials 2025 requirements**:

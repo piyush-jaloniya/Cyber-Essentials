@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cyberessentials.agent</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/python3</string>
+        <string>/opt/ce-agent/agent.py</string>
+        <string>--daemon</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>/opt/ce-agent</string>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    
+    <key>StandardOutPath</key>
+    <string>/var/log/ce-agent.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/var/log/ce-agent-error.log</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CE_CONTROLLER_URL</key>
+        <string>https://controller.local:8000</string>
+        <key>CE_VERIFY_SSL</key>
+        <string>true</string>
+        <key>CE_HEARTBEAT_INTERVAL</key>
+        <string>60</string>
+        <key>CE_COMMAND_POLL_INTERVAL</key>
+        <string>30</string>
+        <key>CE_SCAN_SCHEDULE</key>
+        <string>daily</string>
+    </dict>
+</dict>
+</plist>
