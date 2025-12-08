@@ -12,8 +12,9 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # Database
-    database_url: str = "postgresql://ce_user:ce_password@localhost:5432/ce_controller"
+    database_url: str  # Required - must be set via environment variable
     # For development with SQLite: "sqlite:///./ce_controller.db"
+    # For PostgreSQL: "postgresql://ce_user:PASSWORD@localhost:5432/ce_controller"
     
     # Security
     secret_key: str = "CHANGE_ME_IN_PRODUCTION_USE_RANDOM_STRING"
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
     api_prefix: str = "/api"
     
     # CORS
-    cors_origins: list = ["http://localhost:3000", "http://localhost:8000"]
+    cors_origins: list = []  # Set via environment variable for security
     
     class Config:
         env_file = ".env"

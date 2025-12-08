@@ -7,11 +7,11 @@ from datetime import datetime
 # Agent schemas
 class AgentRegister(BaseModel):
     """Schema for agent registration"""
-    hostname: str
-    os: str
-    os_version: Optional[str] = None
-    ip: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    hostname: str = Field(..., min_length=1, max_length=255, pattern=r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$')
+    os: str = Field(..., min_length=1, max_length=100)
+    os_version: Optional[str] = Field(None, max_length=100)
+    ip: Optional[str] = Field(None, max_length=45, pattern=r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$')
+    metadata: Optional[Dict[str, Any]] = Field(None, max_items=50)
 
 
 class AgentResponse(BaseModel):

@@ -18,6 +18,7 @@ import platform
 import socket
 import argparse
 import subprocess
+import random
 from datetime import datetime
 from typing import Optional, Dict, Any
 
@@ -93,36 +94,62 @@ class CEAgent:
         except Exception:
             return "unknown"
     
-    def register(self) -> bool:
-        """Register agent with controller"""
-        try:
-            logger.info("Attempting to register with controller...")
-            
-            system_info = self.get_system_info()
-            response = requests.post(
-                f"{self.controller_url}/api/agents/register",
-                json=system_info,
-                verify=self.verify_ssl,
-                timeout=10
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.agent_id = data["agent_id"]
-                self.agent_token = data["agent_token"]
+    def register(self, max_retries: int = 3) -> bool:
+        """Register agent with controller with exponential backoff"""
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Attempting to register with controller (attempt {attempt + 1}/{max_retries})...")
                 
-                # Store token securely
-                store_token(self.agent_token)
+                system_info = self.get_system_info()
+                response = requests.post(
+                    f"{self.controller_url}/api/agents/register",
+                    json=system_info,
+                    verify=self.verify_ssl,
+                    timeout=10
+                )
                 
-                logger.info(f"Successfully registered as agent {self.agent_id}")
-                return True
-            else:
-                logger.error(f"Registration failed: {response.status_code} - {response.text}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Registration error: {e}")
-            return False
+                if response.status_code == 200:
+                    data = response.json()
+                    self.agent_id = data["agent_id"]
+                    self.agent_token = data["agent_token"]
+                    
+                    # Store token securely
+                    store_token(self.agent_token)
+                    
+                    logger.info(f"Successfully registered as agent {self.agent_id}")
+                    return True
+                else:
+                    logger.error(f"Registration failed: {response.status_code} - {response.text}")
+                    if attempt < max_retries - 1:
+                        wait_time = (2 ** attempt) + random.uniform(0, 1)
+                        logger.info(f"Retrying in {wait_time:.2f} seconds...")
+                        time.sleep(wait_time)
+                    else:
+                        return False
+                    
+            except requests.exceptions.Timeout as e:
+                logger.error(f"Registration timeout (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) + random.uniform(0, 1)
+                    time.sleep(wait_time)
+                else:
+                    return False
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Connection error (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) + random.uniform(0, 1)
+                    time.sleep(wait_time)
+                else:
+                    return False
+            except Exception as e:
+                logger.error(f"Registration error (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    wait_time = (2 ** attempt) + random.uniform(0, 1)
+                    time.sleep(wait_time)
+                else:
+                    return False
+        
+        return False
     
     def load_stored_credentials(self) -> bool:
         """Load stored agent credentials"""
@@ -156,10 +183,20 @@ class CEAgent:
             if response.status_code == 200:
                 logger.debug("Heartbeat sent successfully")
                 return True
+            elif response.status_code == 401:
+                logger.error("Authentication failed - token may be invalid or expired")
+                self.running = False  # Stop daemon on auth failure
+                return False
             else:
                 logger.warning(f"Heartbeat failed: {response.status_code}")
                 return False
                 
+        except requests.exceptions.Timeout:
+            logger.warning("Heartbeat timeout - controller may be unreachable")
+            return False
+        except requests.exceptions.ConnectionError:
+            logger.warning("Connection error - controller may be down")
+            return False
         except Exception as e:
             logger.error(f"Heartbeat error: {e}")
             return False
@@ -182,9 +219,16 @@ class CEAgent:
                 commands = response.json()
                 for command in commands:
                     self.execute_command(command)
+            elif response.status_code == 401:
+                logger.error("Authentication failed when polling commands")
+                self.running = False  # Stop daemon on auth failure
             elif response.status_code != 404:
                 logger.warning(f"Command polling failed: {response.status_code}")
                 
+        except requests.exceptions.Timeout:
+            logger.warning("Command poll timeout")
+        except requests.exceptions.ConnectionError:
+            logger.warning("Connection error during command poll")
         except Exception as e:
             logger.error(f"Command polling error: {e}")
     

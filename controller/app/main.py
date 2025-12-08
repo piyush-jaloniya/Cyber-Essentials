@@ -119,9 +119,8 @@ def register_agent(agent_data: AgentRegister, db: Session = Depends(get_db)):
     # Generate agent token
     agent_token = create_agent_token(agent.id)
     
-    # Store hashed token (in production, hash the token)
-    # For now, we'll store a placeholder
-    agent.auth_key_hash = agent_token[:32]  # Store first 32 chars as reference
+    # Store hashed token for security
+    agent.auth_key_hash = hashlib.sha256(agent_token.encode()).hexdigest()
     db.commit()
     
     return {"agent_id": agent.id, "agent_token": agent_token}
